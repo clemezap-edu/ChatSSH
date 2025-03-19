@@ -1,0 +1,32 @@
+- - - - Configuración inicial
+
+- - - - - - Servidor
+1. Editar el archivo en la ruta: /etc/ssh/sshd_config:
+	 1.1 Asegurarse que las siguientes lineas estén configuradas:
+		GatewayPorts yes
+		AllowTcpForwarding yes
+
+2. Instalar dependencias
+pip install flask paramiko
+
+- - - - - - Computadoras
+1. Configurar permisos para el túnel inverso SSH
+	sudo iptables -A INPUT -p tcp --dport 2201 -j ACCEPT
+	sudo ufw allow 2201/tcp
+
+2. Configurar permisos para apagado remoto
+	2.2 Editar el archivo sudoers:
+		sudo visudo
+	2.3 Añadir la siguiente linea al final del archivo
+		usuario ALL=(ALL) NOPASSWD: /sbin/shutdown
+
+3. Establecer el tunel inverso
+	3.1 Conexión al droplet
+	ssh -N -R 2201:localhost:22 root@ip_droplet
+
+
+- - - - Iniciar el servidor de Flask
+1. Navegar hacia el directorio donde está el archivo python
+	/ruta/carpeta/
+2. Iniciar el programa python
+	python3 main.py

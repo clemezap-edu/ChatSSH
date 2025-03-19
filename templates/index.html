@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Remoto de Computadoras</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        .computer-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .computer-card h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .shutdown-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .timer-btn {
+            background-color: #3498db;
+            color: white;
+        }
+        .cancel-btn {
+            background-color: #7f8c8d;
+            color: white;
+        }
+        .timer-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        input[type="number"] {
+            width: 70px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .timer-display {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            margin-top: 10px;
+        }
+        .timer-active {
+            display: block;
+        }
+        .progress-bar {
+            height: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 1s linear;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .error {
+            background-color: #e74c3c;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Control Remoto de Computadoras</h1>
+    
+    <div class="grid">
+        {% for pc_id, computer in computers.items() %}
+        <div class="computer-card" id="computer-{{ pc_id }}">
+            <h2>{{ computer.name }}</h2>
+            
+            <div class="button-group">
+                <button class="shutdown-btn" onclick="shutdownComputer('{{ pc_id }}')">Apagar ahora</button>
+                <button class="timer-btn" onclick="toggleTimerControls('{{ pc_id }}')">Programar apagado</button>
+            </div>
+            
+            <div class="timer-controls" id="timer-controls-{{ pc_id }}" style="display: none;">
+                <input type="number" id="timer-minutes-{{ pc_id }}" min="1" max="1440" value="30">
+                <label for="timer-minutes-{{ pc_id }}">minutos</label>
+                <button class="timer-btn" onclick="scheduleShutdown('{{ pc_id }}')">Iniciar temporizador</button>
+            </div>
+            
+            <div class="timer-display" id="timer-display-{{ pc_id }}" {% if pc_id in timers %} class="timer-active" {% endif %}>
+                <div>Apagado programado en <span id="timer-remaining-{{ pc_id }}">
+                    {% if pc_id in timers %}{{ timers[pc_id].remaining }}{% else %}0{% endif %}
+                </span> minutos</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="timer-progress-{{ pc_id }}" 
+                         style="width: {% if pc_id in timers %}{{ (timers[pc_id].remaining / timers[pc_id].total) * 100 }}{% else %}0{% endif %}%"></div>
+                </div>
+                <button class="cancel-btn" onclick="cancelTimer('{{ pc_id }}')">Cancelar temporizador</button>
+            </div>
+            
+            <div class="status" id="status-{{ pc_id }}" style="display: none;"></div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Variables para controlar los temporizadores
+        let timers = {};
+        
+        // Inicializar temporizadores existentes
+        {% for pc_id, timer in timers.items() %}
+        timers['{{ pc_id }}'] = {
+            active: true,
+            remaining: {{ timer.remaining }},
+            total: {{ timer.total }}
+        };
+        document.getElementById('timer-display-{{ pc_id }}').classList.add('timer-active');
+        document.getElementById('timer-display-{{ pc_id }}').style.display = 'block';
+        {% endfor %}
+        
+        // Actualizar los temporizadores cada segundo
+        setInterval(updateTimers, 1000);
+        
+        // Función para actualizar todos los temporizadores activos
+        function updateTimers() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Actualizar cada temporizador con los datos del servidor
+                    for (const [pc_id, timer] of Object.entries(data)) {
+                        timers[pc_id] = timer;
+                        updateTimerDisplay(pc_id);
+                    }
+                    
+                    // Revisar temporizadores locales
+                    for (const [pc_id, timer] of Object.entries(timers)) {
+                        if (timer.active) {
+                            if (timer.remaining > 0) {
+                                timer.remaining -= 1/60;  // Disminuir 1 segundo
+                                updateTimer
+				updateTimerDisplay(pc_id);
+                            } else {
+                                // Temporizador completado
+                                document.getElementById(`timer-display-${pc_id}`).style.display = 'none';
+                                delete timers[pc_id];
+                            }
+                        }
+                    }
+                });
+        }
+        
+        // Función para actualizar la visualización de un temporizador específico
+        function updateTimerDisplay(pc_id) {
+            const timer = timers[pc_id];
+            if (timer && timer.active) {
+                const timerDisplay = document.getElementById(`timer-display-${pc_id}`);
+                const remainingSpan = document.getElementById(`timer-remaining-${pc_id}`);
+                const progressFill = document.getElementById(`timer-progress-${pc_id}`);
+                
+                timerDisplay.style.display = 'block';
+                remainingSpan.textContent = Math.max(0, Math.ceil(timer.remaining));
+                
+                // Actualizar barra de progreso
+                const percentRemaining = (timer.remaining / timer.total) * 100;
+                progressFill.style.width = `${percentRemaining}%`;
+            }
+        }
+        
+        // Función para mostrar/ocultar los controles de temporizador
+        function toggleTimerControls(pc_id) {
+            const timerControls = document.getElementById(`timer-controls-${pc_id}`);
+            timerControls.style.display = timerControls.style.display === 'none' ? 'flex' : 'none';
+        }
+        
+        // Función para apagar una computadora inmediatamente
+        function shutdownComputer(pc_id) {
+            if (confirm(`¿Estás seguro de que deseas apagar ${pc_id} ahora?`)) {
+                fetch(`/shutdown/${pc_id}`, {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showStatus(pc_id, data.message, data.success);
+                })
+                .catch(error => {
+                    showStatus(pc_id, "Error al comunicarse con el servidor", false);
+                });
+            }
+        }
+        
+        // Función para programar el apagado de una computadora
+        function scheduleShutdown(pc_id) {
+            const minutesInput = document.getElementById(`timer-minutes-${pc_id}`);
+            const minutes = parseInt(minutesInput.value);
+            
+            if (isNaN(minutes) || minutes < 1) {
+                showStatus(pc_id, "Por favor ingresa un número válido de minutos", false);
+                return;
+            }
+            
+            fetch(`/schedule/${pc_id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `minutes=${minutes}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    timers[pc_id] = {
+                        active: true,
+                        remaining: minutes,
+                        total: minutes
+                    };
+                    document.getElementById(`timer-controls-${pc_id}`).style.display = 'none';
+                    updateTimerDisplay(pc_id);
+                }
+                showStatus(pc_id, data.message, data.success);
+            })
+            .catch(error => {
+                showStatus(pc_id, "Error al comunicarse con el servidor", false);
+            });
+        }
+        
+        // Función para cancelar un temporizador activo
+        function cancelTimer(pc_id) {
+            fetch(`/cancel/${pc_id}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`timer-display-${pc_id}`).style.display = 'none';
+                    delete timers[pc_id];
+                }
+                showStatus(pc_id, data.message, data.success);
+            })
+            .catch(error => {
+                showStatus(pc_id, "Error al comunicarse con el servidor", false);
+            });
+        }
+        
+        // Función para mostrar mensajes de estado
+        function showStatus(pc_id, message, success) {
+            const statusDiv = document.getElementById(`status-${pc_id}`);
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + (success ? 'success' : 'error');
+            statusDiv.style.display = 'block';
+            
+            // Ocultar el mensaje después de 3 segundos
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
