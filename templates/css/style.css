@@ -1,0 +1,100 @@
+body {
+    
+    background-color: #e9e4dc;
+    font-family: Arial, sans-serif;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px;
+}
+h1 {
+    text-align: center;
+    color: #333;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+}
+.computer-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    background-color: #f9f9f9;
+}
+.computer-card h2 {
+    margin-top: 0;
+    color: #444;
+}
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.shutdown-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+.timer-btn {
+    background-color: #db9834;
+    color: white;
+}
+.cancel-btn {
+    background-color: #7f8c8d;
+    color: white;
+}
+.timer-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+input[type="number"] {
+    width: 70px;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.timer-display {
+    background-color: #eee;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    margin-top: 10px;
+}
+.timer-active {
+    display: block;
+}
+.progress-bar {
+    height: 10px;
+    background-color: #ecf0f1;
+    border-radius: 5px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background-color: #3498db;
+    width: 0%;
+    transition: width 1s linear;
+}
+.status {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+}
+.success {
+    background-color: #2ecc71;
+    color: white;
+}
+.error {
+    background-color: #e74c3c;
+    color: white;
+}
