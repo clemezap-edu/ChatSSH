@@ -8,10 +8,10 @@ app = Flask(__name__)
 
 # Configuración de computadoras. Actualizar con las contraseñas correspondientes.
 COMPUTERS = {
-    "PC1": {"port": 2201, "name": "Computadora 1"},
-    "PC2": {"port": 2202, "name": "Computadora 2"},
-    "PC3": {"port": 2203, "name": "Computadora 3"},
-    "PC4": {"port": 2204, "name": "Computadora 4"}
+    "PC1": {"port": 2201, "name": "Computadora 1", "username": "usuario1", "password": "contraseña1"},
+    "PC2": {"port": 2202, "name": "Computadora 2", "username": "usuario2", "password": "contraseña2"},
+    "PC3": {"port": 2203, "name": "Computadora 3", "username": "usuario3", "password": "contraseña3"},
+    "PC4": {"port": 2204, "name": "Computadora 4", "username": "usuario4", "password": "contraseña4"}
 }
 
 # Almacena los temporizadores activos
@@ -32,8 +32,8 @@ def shutdown_computer(pc_id):
         client.connect(
             hostname='localhost',
             port=computer['port'],
-            username='usuario_remoto',  # Cambiar por tu usuario en la PC remota
-            key_filename='/ruta/a/tu/clave/privada'  # Ruta a tu clave SSH privada
+            username= computer.get('username'),  # Cambiar por tu usuario en la PC remota
+            username= computer.get('username')  # Ruta a tu clave SSH privada
         )
         
         # Comando de apagado según el sistema operativo
@@ -140,4 +140,4 @@ if __name__ == '__main__':
     if not os.path.exists('templates'):
         os.makedirs('templates')
         
-    app.run(host='0.0.0.0', port=80, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
