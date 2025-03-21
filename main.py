@@ -2,11 +2,11 @@ import os
 import paramiko
 import threading
 import time
+import socket
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 app = Flask(__name__)
 
-# Configuración de computadoras. Actualizar con las contraseñas correspondientes.
 COMPUTERS = {
     "PC1": {"port": 2201, "name": "Computadora 1", "username": "usuario1", "password": "contraseña1"},
     "PC2": {"port": 2202, "name": "Computadora 2", "username": "usuario2", "password": "contraseña2"},
@@ -14,7 +14,6 @@ COMPUTERS = {
     "PC4": {"port": 2204, "name": "Computadora 4", "username": "usuario4", "password": "contraseña4"}
 }
 
-# Almacena los temporizadores activos
 active_timers = {}
 
 def shutdown_computer(pc_id):
@@ -27,29 +26,81 @@ def shutdown_computer(pc_id):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
-        # Conectarse a través del túnel SSH inverso
-        # 'localhost' porque el túnel ya está redirigiendo al puerto local
-        client.connect(
-            hostname='localhost',
-            port=computer['port'],
-            username= computer.get('username'),  # Cambiar por tu usuario en la PC remota
-            username= computer.get('username')  # Ruta a tu clave SSH privada
-        )
+        socket_timeout = 10
         
-        # Comando de apagado según el sistema operativo
-        # Para Windows: shutdown /s /t 0
-        # Para Linux/Mac: sudo shutdown -h now
-        stdin, stdout, stderr = client.exec_command('sudo shutdown -h now')
+        try:
+            client.connect(
+                hostname='localhost',
+                port=computer['port'],
+                username=computer.get('username'),
+                password=computer.get('password'),
+                timeout=socket_timeout,
+                allow_agent=False,
+                look_for_keys=False
+            )
+            
+            try:
+                stdin, stdout, stderr = client.exec_command('uname -s', timeout=5)
+                os_type = stdout.read().decode('utf-8').strip().lower()
+                
+                if 'linux' in os_type or 'darwin' in os_type:
+                    shutdown_cmd = 'sudo shutdown -h now'
+                else:
+                    shutdown_cmd = 'shutdown /s /t 0'
+            except:
+                shutdown_cmd = 'shutdown /s /t 0'
+            
+            stdin, stdout, stderr = client.exec_command(shutdown_cmd, timeout=10)
+            error = stderr.read().decode('utf-8')
+            
+            if error:
+                return {"success": False, "message": f"Error al ejecutar comando: {error}"}
+            
+            client.close()
+            return {"success": True, "message": f"Comando de apagado enviado a {computer['name']}"}
         
-        client.close()
-        return {"success": True, "message": f"Comando de apagado enviado a {computer['name']}"}
+        except paramiko.AuthenticationException:
+            return {"success": False, "message": f"Error de autenticación para {computer['name']}. Verifica usuario y contraseña."}
+        except paramiko.SSHException as ssh_ex:
+            return {"success": False, "message": f"Error SSH para {computer['name']}: {str(ssh_ex)}"}
+        except socket.timeout:
+            return {"success": False, "message": f"Timeout al conectar con {computer['name']}"}
+        except socket.error as sock_err:
+            return {"success": False, "message": f"Error de conexión con {computer['name']}: {str(sock_err)}"}
+            
     except Exception as e:
-        return {"success": False, "message": f"Error al apagar computadora: {str(e)}"}
+        return {"success": False, "message": f"Error inesperado: {str(e)}"}
+
+def test_connection(pc_id):
+    """Prueba la conexión SSH sin ejecutar comandos"""
+    try:
+        computer = COMPUTERS.get(pc_id)
+        if not computer:
+            return {"success": False, "message": "Computadora no encontrada"}
+        
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        try:
+            client.connect(
+                hostname='localhost',
+                port=computer['port'],
+                username=computer.get('username'),
+                password=computer.get('password'),
+                timeout=5,
+                allow_agent=False,
+                look_for_keys=False
+            )
+            client.close()
+            return {"success": True, "message": f"Conexión exitosa a {computer['name']}"}
+        except Exception as e:
+            return {"success": False, "message": f"Error de conexión: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "message": f"Error: {str(e)}"}
 
 def schedule_shutdown(pc_id, minutes):
     """Programa un apagado con temporizador"""
     if pc_id in active_timers and active_timers[pc_id]["thread"].is_alive():
-        # Cancelar temporizador existente
         active_timers[pc_id]["active"] = False
     
     def timer_thread(pc_id, minutes):
@@ -61,18 +112,15 @@ def schedule_shutdown(pc_id, minutes):
             "minutes": minutes
         }
         
-        # Esperar los minutos especificados
         for _ in range(minutes * 60):
             time.sleep(1)
             if pc_id not in active_timers or not active_timers[pc_id]["active"]:
-                return  # Temporizador cancelado
+                return 
         
-        # Ejecutar apagado
         if pc_id in active_timers and active_timers[pc_id]["active"]:
             result = shutdown_computer(pc_id)
             del active_timers[pc_id]
     
-    # Iniciar hilo para el temporizador
     timer = threading.Thread(target=timer_thread, args=(pc_id, minutes))
     timer.daemon = True
     timer.start()
@@ -100,6 +148,12 @@ def index():
 def shutdown(pc_id):
     """Ruta para apagar inmediatamente una computadora"""
     result = shutdown_computer(pc_id)
+    return jsonify(result)
+
+@app.route('/test/<pc_id>', methods=['POST'])
+def test(pc_id):
+    """Ruta para probar la conexión a una computadora"""
+    result = test_connection(pc_id)
     return jsonify(result)
 
 @app.route('/schedule/<pc_id>', methods=['POST'])
@@ -136,7 +190,6 @@ def status():
     return jsonify(timer_data)
 
 if __name__ == '__main__':
-    # Asegúrate de crear una carpeta 'templates' y poner el archivo index.html ahí
     if not os.path.exists('templates'):
         os.makedirs('templates')
         
