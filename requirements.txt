@@ -24,6 +24,14 @@ pip install flask paramiko
 	3.1 Conexión al droplet
 	ssh -N -R 2201:localhost:22 root@ip_droplet
 
+- - - - - - - - - Computadoras Extra
+1. Verificar si el servicio de ssh está activo
+	1.1 Comprobar si está activo
+		systemctl status ssh
+		1.1.1 Si no lo está
+			systemct start ssh
+	1.2 Hacer conexión ssh haciendo login
+		Quitaremos el parametro "-N" para visualmente comprobar el "loggeo". 
 
 - - - - Iniciar el servidor de Flask
 1. Navegar hacia el directorio donde está el archivo python
