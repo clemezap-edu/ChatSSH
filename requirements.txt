@@ -29,10 +29,11 @@ pip install flask paramiko
 	1.1 Comprobar si está activo
 		systemctl status ssh
 		1.1.1 Si no lo está
-			systemct start ssh
+			systemctl start ssh
+		1.1.2 Activar el serivcio al iniciar la computadora
+			systemctl enable ssh
 	1.2 Hacer conexión ssh haciendo login
 		Quitaremos el parametro "-N" para visualmente comprobar el "loggeo". 
-
 - - - - Iniciar el servidor de Flask
 1. Navegar hacia el directorio donde está el archivo python
 	/ruta/carpeta/
