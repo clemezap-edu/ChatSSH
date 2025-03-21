@@ -20,8 +20,7 @@ Las librerías utilizadas están documentadas en el documento "requirements.txt"
 #### 🖧  Flask
 Flask es un framework minimalista escrito en Python que permite crear aplicaciones web rápidamente y con un mínimo número de líneas de código. Esta basado en la especificación WSGI de Werkzeug y el motor de templates Jinja2 y tiene una licencia BSD
 
-<pre><code>
-	import os
+<pre><code>	import os
 	import paramiko
 	import threading
 	import time
